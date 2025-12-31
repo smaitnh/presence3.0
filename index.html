@@ -137,31 +137,6 @@
             --bronze: #CD7F32;
         }
 
-/* Prevent mobile browser from modifying input styles */
-.title-input, .info-input, .name-input {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    -webkit-user-select: text !important;
-    user-select: text !important;
-    -webkit-tap-highlight-color: rgba(0,0,0,0);
-    -webkit-touch-callout: default;
-}
-
-/* Disable autocorrect styles */
-input[type="text"] {
-    -webkit-box-shadow: none !important;
-    box-shadow: none !important;
-    -webkit-text-fill-color: inherit !important;
-}
-
-/* Prevent iOS from zooming on focus */
-@media screen and (max-width: 768px) {
-    .title-input, .info-input, .name-input {
-        font-size: 16px !important; /* Mencegah zoom iOS */
-    }
-}
-        
 /* === FIX UNTUK ORG MODAL - TAMBAHKAN DI SEMUA FILE === */
 #orgModal {
     display: none !important;
@@ -1235,6 +1210,8 @@ body.modal-open {
     animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s;
 }
 
+
+
 /* Animations */
 @keyframes pulse {
     0% { transform: scale(1); opacity: 1; }
@@ -1284,6 +1261,7 @@ body.modal-open {
         opacity: 1;
     }
 }
+
     </style>
 
     <script>
@@ -1436,81 +1414,92 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateTable() {
-        tableBody.innerHTML = '';
-        let savedNames = JSON.parse(localStorage.getItem('attendanceNames')) || [];
-        
-        // Ensure we have exactly maxRows names in the array
-        if (savedNames.length < maxRows) {
-            savedNames = [...savedNames, ...Array(maxRows - savedNames.length).fill('')];
-        } else if (savedNames.length > maxRows) {
-            savedNames = savedNames.slice(0, maxRows);
-        }
-        
-        let startIndex, endIndex, displayOffset;
-        
-        if (displayMode === 'one-page') {
-            // Show only 20 names in one page
-            startIndex = 0;
-            endIndex = 20;
-            displayOffset = 1;
-        } else {
-            // Multi-page mode - calculate based on current page
-            const pageNumber = parseInt(currentPage) - 1; // 0-based
-            startIndex = pageNumber * 20; // 20 names per page
-            endIndex = startIndex + 20;
-            displayOffset = startIndex + 1;
-        }
-        
-        // Limit endIndex to maxRows
-        if (endIndex > maxRows) {
-            endIndex = maxRows;
-        }
-        
-        for (let i = startIndex; i < endIndex; i++) {
-            const row = document.createElement('tr');
-            const nameValue = savedNames[i] || '';
-            const displayNumber = (i - startIndex) + displayOffset;
-            
-            row.innerHTML = `
-                <td>${displayNumber}.</td>
-                <td>
-                    <input type="text" class="name-input" data-index="${i}" value="${nameValue}" maxlength="50" placeholder="Name">
-                </td>
-            `;
-            tableBody.appendChild(row);
-        }
-        
-        console.log('index.html: Table populated for mode', displayMode, 'page', currentPage, 'showing names', displayOffset, 'to', (endIndex - startIndex) + displayOffset - 1);
-        
-        // Only populate titles and info if we're on first page
-        if (currentPage === '1') {
-            const savedTitles = JSON.parse(localStorage.getItem('reportTitles')) || [];
-            document.getElementById('title1').value = savedTitles[0] || "";
-            document.getElementById('title2').value = savedTitles[1] || "";
-            document.getElementById('title3').value = savedTitles[2] || "";
-            
-            const savedDate = localStorage.getItem('tanggalPresensi') || "";
-            document.getElementById('tanggalPresensi').value = savedDate;
-            
-            const savedInfo = JSON.parse(localStorage.getItem('attendanceInfo')) || {};
-            document.getElementById('waktu').value = savedInfo.waktu || "";
-            document.getElementById('tempat').value = savedInfo.tempat || "";
-            document.getElementById('keterangan').value = savedInfo.keterangan || "";
-        }
-        
-        // Add focus event listeners to track active input
-        document.querySelectorAll('.name-input').forEach(input => {
-            input.addEventListener('focus', () => {
-                activeInputElement = input;
-            });
-            
-            input.addEventListener('blur', () => {
-                if (activeInputElement === input) {
-                    activeInputElement = null;
-                }
-            });
-        });
+    tableBody.innerHTML = '';
+    let savedNames = JSON.parse(localStorage.getItem('attendanceNames')) || [];
+    
+    // Ensure we have exactly maxRows names in the array
+    if (savedNames.length < maxRows) {
+        savedNames = [...savedNames, ...Array(maxRows - savedNames.length).fill('')];
+    } else if (savedNames.length > maxRows) {
+        savedNames = savedNames.slice(0, maxRows);
     }
+    
+    let startIndex, endIndex, displayOffset;
+    
+    if (displayMode === 'one-page') {
+        // Show only 20 names in one page
+        startIndex = 0;
+        endIndex = 20;
+        displayOffset = 1;
+    } else {
+        // Multi-page mode - calculate based on current page
+        const pageNumber = parseInt(currentPage) - 1; // 0-based
+        startIndex = pageNumber * 20; // 20 names per page
+        endIndex = startIndex + 20;
+        displayOffset = startIndex + 1;
+    }
+    
+    // Limit endIndex to maxRows
+    if (endIndex > maxRows) {
+        endIndex = maxRows;
+    }
+    
+    for (let i = startIndex; i < endIndex; i++) {
+        const row = document.createElement('tr');
+        // Tampilkan nilai ASLI termasuk spasi
+        const nameValue = savedNames[i] || '';
+        const displayNumber = (i - startIndex) + displayOffset;
+        
+        row.innerHTML = `
+            <td>${displayNumber}.</td>
+            <td>
+                <input type="text" class="name-input" data-index="${i}" 
+                       value="${escapeHtml(nameValue)}" maxlength="50" 
+                       placeholder="Name">
+            </td>
+        `;
+        tableBody.appendChild(row);
+    }
+    
+    // Only populate titles and info if we're on first page
+    if (currentPage === '1') {
+        const savedTitles = JSON.parse(localStorage.getItem('reportTitles')) || [];
+        document.getElementById('title1').value = savedTitles[0] || "";
+        document.getElementById('title2').value = savedTitles[1] || "";
+        document.getElementById('title3').value = savedTitles[2] || "";
+        
+        const savedDate = localStorage.getItem('tanggalPresensi') || "";
+        document.getElementById('tanggalPresensi').value = savedDate;
+        
+        const savedInfo = JSON.parse(localStorage.getItem('attendanceInfo')) || {};
+        document.getElementById('waktu').value = savedInfo.waktu || "";
+        document.getElementById('tempat').value = savedInfo.tempat || "";
+        document.getElementById('keterangan').value = savedInfo.keterangan || "";
+    }
+    
+    // Add focus event listeners to track active input
+    document.querySelectorAll('.name-input').forEach(input => {
+        input.addEventListener('focus', () => {
+            activeInputElement = input;
+        });
+        
+        input.addEventListener('blur', () => {
+            if (activeInputElement === input) {
+                activeInputElement = null;
+            }
+        });
+    });
+    
+    // Panggil fungsi pencegahan spasi
+    setTimeout(preventAutoSpaceDeletion, 50);
+}
+
+// Helper function untuk escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
     // Hamburger menu functionality
     function setupHamburgerMenu() {
@@ -1634,47 +1623,48 @@ document.addEventListener('DOMContentLoaded', () => {
         saveTimeout = setTimeout(autoSave, 500);
     }
     
-    // Function to save data without re-rendering
-    function saveDataWithoutRerender() {
-        // Get all name inputs and update the saved array
-        const nameInputs = document.querySelectorAll('.name-input');
-        let savedNames = JSON.parse(localStorage.getItem('attendanceNames')) || Array(maxRows).fill('');
-        
-        // Update the saved names array with current input values
-        nameInputs.forEach(input => {
-            const index = parseInt(input.dataset.index);
-            if (!isNaN(index) && index >= 0 && index < maxRows) {
-                savedNames[index] = input.value.trim();
-            }
-        });
-        
-        // Always save titles and info from the DOM
-        const titles = [
-            document.getElementById('title1').value.trim(),
-            document.getElementById('title2').value.trim(),
-            document.getElementById('title3').value.trim()
-        ];
-        
-        const info = {
-            waktu: document.getElementById('waktu').value.trim(),
-            tempat: document.getElementById('tempat').value.trim(),
-            keterangan: document.getElementById('keterangan').value.trim()
-        };
-        
-        const tanggalPresensi = document.getElementById('tanggalPresensi').value;
-        localStorage.setItem('tanggalPresensi', tanggalPresensi);
-        
-        // Save all data to localStorage
-        localStorage.setItem('attendanceNames', JSON.stringify(savedNames));
-        localStorage.setItem('reportTitles', JSON.stringify(titles));
-        localStorage.setItem('attendanceInfo', JSON.stringify(info));
-        
-        console.log('index.html: Data saved to localStorage,', savedNames.filter(name => name !== '').length, 'names');
-        console.log('index.html: Current display mode:', displayMode);
-        console.log('index.html: Full names array length:', savedNames.length);
-        
-        window.dispatchEvent(new CustomEvent('namesUpdate'));
-    }
+    // Update fungsi save untuk mempertahankan spasi
+function saveDataWithoutRerender() {
+    // Get all name inputs and update the saved array
+    const nameInputs = document.querySelectorAll('.name-input');
+    let savedNames = JSON.parse(localStorage.getItem('attendanceNames')) || Array(maxRows).fill('');
+    
+    // Update the saved names array with current input values
+    // JANGAN gunakan trim() agar spasi dipertahankan
+    nameInputs.forEach(input => {
+        const index = parseInt(input.dataset.index);
+        if (!isNaN(index) && index >= 0 && index < maxRows) {
+            // Simpan nilai ASLI termasuk spasi di awal/akhir/tengah
+            savedNames[index] = input.value; // TIDAK pakai .trim()
+        }
+    });
+    
+    // Always save titles and info from the DOM
+    // TIDAK gunakan trim() untuk menjaga spasi
+    const titles = [
+        document.getElementById('title1').value,
+        document.getElementById('title2').value,
+        document.getElementById('title3').value
+    ];
+    
+    const info = {
+        waktu: document.getElementById('waktu').value,
+        tempat: document.getElementById('tempat').value,
+        keterangan: document.getElementById('keterangan').value
+    };
+    
+    const tanggalPresensi = document.getElementById('tanggalPresensi').value;
+    localStorage.setItem('tanggalPresensi', tanggalPresensi);
+    
+    // Save all data to localStorage
+    localStorage.setItem('attendanceNames', JSON.stringify(savedNames));
+    localStorage.setItem('reportTitles', JSON.stringify(titles));
+    localStorage.setItem('attendanceInfo', JSON.stringify(info));
+    
+    console.log('index.html: Data saved to localStorage,', savedNames.filter(name => name !== '').length, 'names');
+    
+    window.dispatchEvent(new CustomEvent('namesUpdate'));
+}
 
     // Event listeners for form and inputs
     if (form) {
@@ -3210,57 +3200,122 @@ setTimeout(() => {
         console.log("🗄️ DB Manager Status:", window.dbManager.getSyncStatus());
     }
 }, 3000);
-
-// Fungsi untuk mencegah penghapusan spasi otomatis
 function preventAutoSpaceDeletion() {
     const textInputs = document.querySelectorAll('.title-input, .info-input, .name-input');
     
     textInputs.forEach(input => {
         // Simpan nilai awal
         let lastValue = input.value;
+        let isUserTyping = false;
         
-        input.addEventListener('input', function(e) {
-            // Jika ada perubahan karena autocorrect yang menghapus spasi
-            if (this.value.replace(/\s+/g, ' ') !== lastValue.replace(/\s+/g, ' ')) {
-                // Jika spasi di akhir hilang, tambahkan kembali
-                if (lastValue.endsWith(' ') && !this.value.endsWith(' ') && 
-                    this.value === lastValue.trim()) {
-                    this.value = lastValue;
-                }
-                // Jika spasi di tengah hilang, pertahankan format
-                else if (lastValue.includes('  ') && !this.value.includes('  ')) {
-                    // Pertahankan spasi ganda jika itu adalah format yang diinginkan
-                    const words = lastValue.split(/(\s+)/);
-                    const newWords = this.value.split(/(\s+)/);
-                    
-                    if (words.length > newWords.length) {
-                        this.value = lastValue;
-                    }
-                }
-            }
-            lastValue = this.value;
-        });
-        
-        // Tambahkan atribut untuk mencegah autocorrect mobile
+        // Atribut untuk mencegah perilaku mobile browser
         input.setAttribute('autocomplete', 'off');
         input.setAttribute('autocorrect', 'off');
         input.setAttribute('autocapitalize', 'none');
         input.setAttribute('spellcheck', 'false');
         input.setAttribute('inputmode', 'text');
+        input.setAttribute('data-last-value', input.value);
+        
+        input.addEventListener('beforeinput', function(e) {
+            // Catat nilai sebelum input
+            lastValue = this.value;
+            isUserTyping = true;
+        });
+        
+        input.addEventListener('input', function(e) {
+            const currentValue = this.value;
+            
+            // Cek jika spasi dihilangkan otomatis
+            if (lastValue && currentValue) {
+                // Deteksi jika spasi ganda diubah menjadi spasi tunggal
+                if (hasDoubleSpaceReduced(lastValue, currentValue)) {
+                    console.log('Double space detected, restoring...');
+                    this.value = lastValue;
+                    return;
+                }
+                
+                // Deteksi jika spasi di akhir hilang
+                if (lastValue.endsWith(' ') && !currentValue.endsWith(' ') && 
+                    currentValue === lastValue.trimEnd()) {
+                    console.log('Trailing space removed, restoring...');
+                    this.value = lastValue;
+                    return;
+                }
+                
+                // Deteksi jika spasi di tengah hilang
+                const lastWords = lastValue.split(' ');
+                const currentWords = currentValue.split(' ');
+                
+                if (lastWords.length > currentWords.length) {
+                    // Cek apakah perbedaannya hanya spasi
+                    const lastWithoutSpaces = lastValue.replace(/\s+/g, '');
+                    const currentWithoutSpaces = currentValue.replace(/\s+/g, '');
+                    
+                    if (lastWithoutSpaces === currentWithoutSpaces) {
+                        console.log('Middle spaces removed, restoring...');
+                        this.value = lastValue;
+                        return;
+                    }
+                }
+            }
+            
+            // Update last value
+            lastValue = currentValue;
+            this.setAttribute('data-last-value', currentValue);
+            isUserTyping = false;
+        });
+        
+        input.addEventListener('blur', function(e) {
+            // Saat kehilangan fokus, pastikan nilai tidak diubah
+            const currentValue = this.value;
+            const savedValue = this.getAttribute('data-last-value');
+            
+            if (currentValue !== savedValue && !isUserTyping) {
+                this.value = savedValue;
+            }
+        });
+        
+        // Tambahkan event listener untuk keydown untuk menangani spacebar
+        input.addEventListener('keydown', function(e) {
+            if (e.key === ' ') {
+                // Simpan posisi kursor
+                this.setAttribute('data-cursor-pos', this.selectionStart);
+            }
+        });
+        
+        input.addEventListener('keyup', function(e) {
+            if (e.key === ' ') {
+                const cursorPos = parseInt(this.getAttribute('data-cursor-pos') || 0);
+                if (this.selectionStart !== cursorPos + 1) {
+                    // Space mungkin dihilangkan, coba tambahkan manual
+                    const before = this.value.substring(0, cursorPos);
+                    const after = this.value.substring(cursorPos);
+                    this.value = before + ' ' + after;
+                    
+                    // Set posisi kursor kembali
+                    this.setSelectionRange(cursorPos + 1, cursorPos + 1);
+                }
+            }
+        });
     });
+    
+    // Helper function
+    function hasDoubleSpaceReduced(oldVal, newVal) {
+        const oldDoubleSpaces = (oldVal.match(/  /g) || []).length;
+        const newDoubleSpaces = (newVal.match(/  /g) || []).length;
+        
+        // Jika jumlah spasi ganda berkurang tanpa perubahan lain
+        if (oldDoubleSpaces > newDoubleSpaces) {
+            const oldWithoutExtraSpaces = oldVal.replace(/  +/g, ' ');
+            const newWithoutExtraSpaces = newVal.replace(/  +/g, ' ');
+            
+            if (oldWithoutExtraSpaces === newWithoutExtraSpaces) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
-
-// Panggil fungsi saat DOM siap
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(preventAutoSpaceDeletion, 1000);
-});
-
-// Atau panggil setelah populateTable()
-const originalPopulateTable = window.populateTable;
-window.populateTable = function() {
-    originalPopulateTable();
-    setTimeout(preventAutoSpaceDeletion, 100);
-};
 </script>
     <!-- ORGANIZATION CHANGE MODAL -->
 <div id="orgChangeModal" class="modal org-change-modal">
@@ -3311,7 +3366,5 @@ window.populateTable = function() {
 <script src="firebase-config.js"></script>
 <script src="firebase-auth.js"></script>
 <script src="firebase-db.js"></script>
-<!-- Add this line in all three HTML files -->
-<script src="password-protection.js"></script>
 </body>
 </html>
