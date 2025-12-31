@@ -177,7 +177,6 @@ class FirebaseAuthSystem {
         font-family: 'Poppins', sans-serif;
         display: flex;
         align-items: center;
-        border: 1px solid #e0e0e0;
         animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         max-width: 400px;
         backdrop-filter: blur(10px);
