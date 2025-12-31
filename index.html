@@ -3200,121 +3200,172 @@ setTimeout(() => {
         console.log("🗄️ DB Manager Status:", window.dbManager.getSyncStatus());
     }
 }, 3000);
+// Fungsi utama untuk mencegah penghapusan spasi OTOMATIS, tapi biarkan penghapusan MANUAL
 function preventAutoSpaceDeletion() {
     const textInputs = document.querySelectorAll('.title-input, .info-input, .name-input');
     
     textInputs.forEach(input => {
-        // Simpan nilai awal
-        let lastValue = input.value;
-        let isUserTyping = false;
-        
-        // Atribut untuk mencegah perilaku mobile browser
+        // Atribut untuk mencegah autocorrect browser
         input.setAttribute('autocomplete', 'off');
         input.setAttribute('autocorrect', 'off');
         input.setAttribute('autocapitalize', 'none');
         input.setAttribute('spellcheck', 'false');
         input.setAttribute('inputmode', 'text');
-        input.setAttribute('data-last-value', input.value);
         
-        input.addEventListener('beforeinput', function(e) {
-            // Catat nilai sebelum input
-            lastValue = this.value;
-            isUserTyping = true;
+        // Track perubahan
+        let lastValidValue = input.value;
+        let isUserAction = true; // Default true karena user sedang berinteraksi
+        
+        // Simpan state untuk mendeteksi apakah perubahan berasal dari user atau browser
+        let isProgrammaticChange = false;
+        
+        // Event untuk mendeteksi input dari user
+        input.addEventListener('keydown', function(e) {
+            isUserAction = true;
+            
+            // Jika user menekan Backspace atau Delete, biarkan
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                isUserAction = true;
+                return; // Biarkan penghapusan manual
+            }
         });
         
         input.addEventListener('input', function(e) {
             const currentValue = this.value;
             
-            // Cek jika spasi dihilangkan otomatis
-            if (lastValue && currentValue) {
-                // Deteksi jika spasi ganda diubah menjadi spasi tunggal
-                if (hasDoubleSpaceReduced(lastValue, currentValue)) {
-                    console.log('Double space detected, restoring...');
-                    this.value = lastValue;
-                    return;
-                }
+            if (isProgrammaticChange) {
+                // Jika perubahan berasal dari program (bukan user), update lastValidValue
+                isProgrammaticChange = false;
+                lastValidValue = currentValue;
+                return;
+            }
+            
+            // HANYA cegah perubahan OTOMATIS dari browser jika:
+            // 1. User tidak sedang mengetik
+            // 2. Nilai berubah tanpa input event yang jelas
+            // 3. Spasi hilang tanpa action key (Backspace/Delete)
+            
+            // Periksa apakah perubahan ini mungkin dari autocorrect browser
+            const isLikelyAutocorrect = detectAutocorrectChange(lastValidValue, currentValue);
+            
+            if (isLikelyAutocorrect && !isUserAction) {
+                // Ini kemungkinan autocorrect browser, kembalikan nilai sebelumnya
+                console.log('Autocorrect detected, restoring value');
+                this.value = lastValidValue;
                 
-                // Deteksi jika spasi di akhir hilang
-                if (lastValue.endsWith(' ') && !currentValue.endsWith(' ') && 
-                    currentValue === lastValue.trimEnd()) {
-                    console.log('Trailing space removed, restoring...');
-                    this.value = lastValue;
-                    return;
-                }
-                
-                // Deteksi jika spasi di tengah hilang
-                const lastWords = lastValue.split(' ');
-                const currentWords = currentValue.split(' ');
-                
-                if (lastWords.length > currentWords.length) {
-                    // Cek apakah perbedaannya hanya spasi
-                    const lastWithoutSpaces = lastValue.replace(/\s+/g, '');
-                    const currentWithoutSpaces = currentValue.replace(/\s+/g, '');
+                // Set posisi kursor ke akhir
+                setTimeout(() => {
+                    this.selectionStart = this.selectionEnd = lastValidValue.length;
+                }, 0);
+            } else {
+                // Ini aksi user, update lastValidValue
+                lastValidValue = currentValue;
+            }
+            
+            // Reset flag untuk event berikutnya
+            isUserAction = false;
+        });
+        
+        // Juga pantau perubahan melalui properti (browser autocorrect)
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'characterData' || 
+                    (mutation.attributeName === 'value' && !isUserAction)) {
                     
-                    if (lastWithoutSpaces === currentWithoutSpaces) {
-                        console.log('Middle spaces removed, restoring...');
-                        this.value = lastValue;
-                        return;
+                    const newValue = input.value;
+                    if (newValue !== lastValidValue) {
+                        // Cek apakah ini autocorrect yang menghapus spasi
+                        if (isAutocorrectRemovingSpaces(lastValidValue, newValue)) {
+                            console.log('Browser autocorrect removed spaces, restoring');
+                            isProgrammaticChange = true;
+                            input.value = lastValidValue;
+                        } else {
+                            lastValidValue = newValue;
+                        }
                     }
                 }
-            }
-            
-            // Update last value
-            lastValue = currentValue;
-            this.setAttribute('data-last-value', currentValue);
-            isUserTyping = false;
+            });
         });
         
-        input.addEventListener('blur', function(e) {
-            // Saat kehilangan fokus, pastikan nilai tidak diubah
-            const currentValue = this.value;
-            const savedValue = this.getAttribute('data-last-value');
-            
-            if (currentValue !== savedValue && !isUserTyping) {
-                this.value = savedValue;
-            }
+        // Mulai observe perubahan pada input
+        observer.observe(input, {
+            attributes: true,
+            attributeFilter: ['value'],
+            characterData: true,
+            subtree: true
         });
         
-        // Tambahkan event listener untuk keydown untuk menangani spacebar
-        input.addEventListener('keydown', function(e) {
-            if (e.key === ' ') {
-                // Simpan posisi kursor
-                this.setAttribute('data-cursor-pos', this.selectionStart);
-            }
+        // Event focus/blur
+        input.addEventListener('focus', function() {
+            isUserAction = true;
+            lastValidValue = this.value;
         });
         
-        input.addEventListener('keyup', function(e) {
-            if (e.key === ' ') {
-                const cursorPos = parseInt(this.getAttribute('data-cursor-pos') || 0);
-                if (this.selectionStart !== cursorPos + 1) {
-                    // Space mungkin dihilangkan, coba tambahkan manual
-                    const before = this.value.substring(0, cursorPos);
-                    const after = this.value.substring(cursorPos);
-                    this.value = before + ' ' + after;
-                    
-                    // Set posisi kursor kembali
-                    this.setSelectionRange(cursorPos + 1, cursorPos + 1);
-                }
-            }
+        input.addEventListener('blur', function() {
+            lastValidValue = this.value;
         });
     });
+}
+
+// Helper: Deteksi perubahan autocorrect browser
+function detectAutocorrectChange(oldVal, newVal) {
+    // Jika oldVal punya spasi dan newVal tidak (atau lebih sedikit)
+    // TAPI hanya jika user tidak menekan Backspace/Delete
     
-    // Helper function
-    function hasDoubleSpaceReduced(oldVal, newVal) {
-        const oldDoubleSpaces = (oldVal.match(/  /g) || []).length;
-        const newDoubleSpaces = (newVal.match(/  /g) || []).length;
+    // Hitung jumlah spasi
+    const oldSpaces = (oldVal.match(/ /g) || []).length;
+    const newSpaces = (newVal.match(/ /g) || []).length;
+    
+    // Jika spasi berkurang lebih dari 1 tanpa perubahan karakter lain yang signifikan
+    if (oldSpaces > newSpaces && (oldSpaces - newSpaces) > 1) {
+        // Cek apakah string tanpa spasi sama
+        const oldWithoutSpaces = oldVal.replace(/ /g, '');
+        const newWithoutSpaces = newVal.replace(/ /g, '');
         
-        // Jika jumlah spasi ganda berkurang tanpa perubahan lain
-        if (oldDoubleSpaces > newDoubleSpaces) {
-            const oldWithoutExtraSpaces = oldVal.replace(/  +/g, ' ');
-            const newWithoutExtraSpaces = newVal.replace(/  +/g, ' ');
-            
-            if (oldWithoutExtraSpaces === newWithoutExtraSpaces) {
-                return true;
-            }
+        if (oldWithoutSpaces === newWithoutSpaces) {
+            return true; // Kemungkinan autocorrect
         }
-        return false;
     }
+    
+    // Kasus khusus: spasi di akhir hilang
+    if (oldVal.endsWith(' ') && !newVal.endsWith(' ') && 
+        oldVal.trimEnd() === newVal) {
+        return true;
+    }
+    
+    // Kasus khusus: spasi ganda jadi tunggal
+    const oldDoubleSpaces = (oldVal.match(/  /g) || []).length;
+    const newDoubleSpaces = (newVal.match(/  /g) || []).length;
+    
+    if (oldDoubleSpaces > newDoubleSpaces && newDoubleSpaces === 0) {
+        // Semua spasi ganda hilang
+        const oldWithSingleSpaces = oldVal.replace(/  +/g, ' ');
+        if (oldWithSingleSpaces === newVal) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// Helper: Deteksi jika autocorrect menghapus spasi
+function isAutocorrectRemovingSpaces(oldVal, newVal) {
+    // Perubahan hanya pada spasi, bukan karakter lain
+    const oldWithoutSpaces = oldVal.replace(/\s+/g, '');
+    const newWithoutSpaces = newVal.replace(/\s+/g, '');
+    
+    // Jika karakter non-spasi sama tapi spasi berbeda
+    if (oldWithoutSpaces === newWithoutSpaces) {
+        const oldSpaceCount = oldVal.length - oldWithoutSpaces.length;
+        const newSpaceCount = newVal.length - newWithoutSpaces.length;
+        
+        // Jika spasi berkurang tanpa input user yang jelas
+        if (oldSpaceCount > newSpaceCount) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 </script>
     <!-- ORGANIZATION CHANGE MODAL -->
