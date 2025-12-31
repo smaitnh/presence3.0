@@ -840,7 +840,7 @@ async saveSignature(name, imageUrl, keterangan = '') {
                 indicator.style.animation = '';
             }
             
-            this.showNotification('All data synced to cloud ✅', 'success');
+            this.showNotification('All data synced', 'success');
             
         } catch (error) {
             console.error("❌ Error syncing all data:", error);
