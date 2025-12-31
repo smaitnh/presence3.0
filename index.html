@@ -3210,6 +3210,57 @@ setTimeout(() => {
         console.log("🗄️ DB Manager Status:", window.dbManager.getSyncStatus());
     }
 }, 3000);
+
+// Fungsi untuk mencegah penghapusan spasi otomatis
+function preventAutoSpaceDeletion() {
+    const textInputs = document.querySelectorAll('.title-input, .info-input, .name-input');
+    
+    textInputs.forEach(input => {
+        // Simpan nilai awal
+        let lastValue = input.value;
+        
+        input.addEventListener('input', function(e) {
+            // Jika ada perubahan karena autocorrect yang menghapus spasi
+            if (this.value.replace(/\s+/g, ' ') !== lastValue.replace(/\s+/g, ' ')) {
+                // Jika spasi di akhir hilang, tambahkan kembali
+                if (lastValue.endsWith(' ') && !this.value.endsWith(' ') && 
+                    this.value === lastValue.trim()) {
+                    this.value = lastValue;
+                }
+                // Jika spasi di tengah hilang, pertahankan format
+                else if (lastValue.includes('  ') && !this.value.includes('  ')) {
+                    // Pertahankan spasi ganda jika itu adalah format yang diinginkan
+                    const words = lastValue.split(/(\s+)/);
+                    const newWords = this.value.split(/(\s+)/);
+                    
+                    if (words.length > newWords.length) {
+                        this.value = lastValue;
+                    }
+                }
+            }
+            lastValue = this.value;
+        });
+        
+        // Tambahkan atribut untuk mencegah autocorrect mobile
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('autocapitalize', 'none');
+        input.setAttribute('spellcheck', 'false');
+        input.setAttribute('inputmode', 'text');
+    });
+}
+
+// Panggil fungsi saat DOM siap
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(preventAutoSpaceDeletion, 1000);
+});
+
+// Atau panggil setelah populateTable()
+const originalPopulateTable = window.populateTable;
+window.populateTable = function() {
+    originalPopulateTable();
+    setTimeout(preventAutoSpaceDeletion, 100);
+};
 </script>
     <!-- ORGANIZATION CHANGE MODAL -->
 <div id="orgChangeModal" class="modal org-change-modal">
