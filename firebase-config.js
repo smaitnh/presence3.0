@@ -6,12 +6,12 @@ console.log("🔧 Loading Firebase configuration...");
 // REPLACE THESE VALUES WITH YOUR ACTUAL FIREBASE CONFIG
 // ================================
 const firebaseConfig = {
-  apiKey: "AIzaSyBRMDXfrWfmA2Wsc0W6Q-49EOiU6N5JDsE",
-  authDomain: "attendanceorganization.firebaseapp.com",
-  projectId: "attendanceorganization",
-  storageBucket: "attendanceorganization.firebasestorage.app",
-  messagingSenderId: "594171317850",
-  appId: "1:594171317850:web:d2c65ac2a64a58bd97d263"
+    apiKey: "AIzaSyCab0Z4lerCWBFgPynkdSBjAejLYaa1iK0",
+    authDomain: "attendancename.firebaseapp.com",
+    projectId: "attendancename",
+    storageBucket: "attendancename.firebasestorage.app",
+    messagingSenderId: "398812072081",
+    appId: "1:398812072081:web:06653904db554b977c9730"
 };
 
 
